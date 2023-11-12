@@ -7,41 +7,38 @@ use std::thread;
 use std::time::Duration;
 
 fn main() {
-    let mut clipboard_ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-    let mut last_clipboard_content = String::new(); // Initialize with an empty string
+    println!("Starting vxtwitter link changer");
+    println!("Press Ctrl+C to stop");
+
+    let mut clipboard_ctx: clipboard::windows_clipboard::WindowsClipboardContext = ClipboardProvider::new()
+        .expect("Failed to initialize clipboard context");
+
+    let mut last_clipboard_content = String::new();
+
+    // Updated regex to optionally include URL parameters
+    let link_pattern = Regex::new(r"^https://(twitter|x)\.com/\w+/status/\d+(\?\S*)?$")
+        .expect("Failed to compile regex");
 
     loop {
-        // Check the clipboard for changes
-        let clipboard_content = match clipboard_ctx.get_contents() {
-            Ok(content) => content,
-            Err(_) => {
-                // Handle clipboard read errors gracefully (e.g., when clipboard contains non-text data)
-                thread::sleep(Duration::from_secs(1));
-                continue;
-            }
-        };
-
-        // Only proceed if the clipboard content has changed and is a string
-        if clipboard_content != last_clipboard_content {
-            last_clipboard_content = clipboard_content.clone();
-
-            // Define a regex pattern to match Twitter and x.com links with "/status/"
-            let link_pattern = Regex::new(r"https://(twitter|x)\.com/([^\s]*)/status/([^\s]*)").unwrap();
-
-            // Check if the clipboard content matches the pattern
-            if link_pattern.is_match(&clipboard_content) {
-                // Replace the domain in the link
-                let modified_link = link_pattern.replace(&clipboard_content, "https://vxtwitter.com/$2/status/$3");
-
-                // Update the clipboard content with the modified link
-                clipboard_ctx.set_contents(modified_link.to_string()).unwrap();
-
-                // Print a message to the console
-                println!("Changed link:\nBefore: {}\nAfter: {}", clipboard_content, modified_link);
-            }
+        if let Some(modified_link) = check_and_modify_clipboard(&mut clipboard_ctx, &link_pattern, &last_clipboard_content) {
+            last_clipboard_content = modified_link;
         }
 
-        // Sleep for a while to avoid busy-waiting
         thread::sleep(Duration::from_secs(1));
     }
+}
+
+fn check_and_modify_clipboard(clipboard_ctx: &mut ClipboardContext, link_pattern: &Regex, last_content: &str) -> Option<String> {
+    match clipboard_ctx.get_contents() {
+        Ok(content) if content != *last_content && link_pattern.is_match(&content) => {
+            let modified_link = content.replace("twitter.com", "vxtwitter.com").replace("x.com", "vxtwitter.com");
+
+            if clipboard_ctx.set_contents(modified_link.clone()).is_ok() {
+                println!("Changed link:\nBefore: {}\nAfter: {}", content, modified_link);
+                return Some(modified_link);
+            }
+        }
+        _ => {}
+    }
+    None
 }
