@@ -31,7 +31,7 @@ fn main() {
 fn check_and_modify_clipboard(clipboard_ctx: &mut ClipboardContext, link_pattern: &Regex, last_content: &str) -> Option<String> {
     match clipboard_ctx.get_contents() {
         Ok(content) if content != *last_content && link_pattern.is_match(&content) => {
-            let modified_link = content.replace("twitter.com", "vxtwitter.com").replace("x.com", "vxtwitter.com");
+            let modified_link = content.replace("twitter.com", "fixupx.com").replace("x.com", "fixupx.com");
 
             if clipboard_ctx.set_contents(modified_link.clone()).is_ok() {
                 println!("Changed link:\nBefore: {}\nAfter: {}", content, modified_link);
